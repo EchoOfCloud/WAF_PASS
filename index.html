@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>字符串拼接工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+            font-family: monospace;
+        }
+        input[type="number"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .output-container {
+            margin-top: 20px;
+        }
+        #output {
+            min-height: 100px;
+            background-color: #f9f9f9;
+        }
+        .about-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: #2196F3;
+        }
+        .about-btn:hover {
+            background-color: #0b7dda;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 400px;
+            border-radius: 8px;
+            text-align: left;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: black;
+        }
+        .modal-content a {
+            color: #2196F3;
+            text-decoration: none;
+        }
+        .modal-content a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>字符串拼接工具</h1>
+        <button id="about-btn" class="about-btn">关于</button>
+        <div class="form-group">
+            <label for="input">输入字符串：</label>
+            <textarea id="input" rows="5" placeholder="请输入需要转换的字符串"></textarea>
+        </div>
+        <div class="form-group">
+            <label for="chunk-size">拼接长度：</label>
+            <input type="number" id="chunk-size" min="1" value="2">
+            <span>（每个拼接段的字母数量）</span>
+        </div>
+        <div class="form-group">
+            <label for="symbols">需要拼接的符号：</label>
+            <input type="text" id="symbols" placeholder="例如：_">
+            <span>（输入需要单独拼接的符号，多个符号用空格分隔）</span>
+        </div>
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="remove-duplicates">
+                去除重复的拼接符号
+            </label>
+            <span>（例如：将''转换为'）</span>
+        </div>
+        <button onclick="convertString()">转换</button>
+        <div class="output-container">
+            <label for="output">转换结果：</label>
+            <textarea id="output" rows="5" readonly></textarea>
+        </div>
+    </div>
+    
+    <!-- 关于弹窗 -->
+    <div id="about-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="close-modal">&times;</span>
+            <h2>关于</h2>
+            <p>作者：EchoOfCloud</p>
+            <p>项目地址：<a href="https://github.com/EchoOfCloud/WAF_PASS" target="_blank">https://github.com/EchoOfCloud/WAF_PASS</a></p>
+            <p>项目介绍：这是一个用于规避WAF（Web应用防火墙）的字符串拼接工具，通过将长字符串分割成多个短字符串并使用+号连接，帮助开发者绕过WAF的检测机制。</p>
+        </div>
+    </div>
+    
+    <script>
+        function convertString() {
+            const input = document.getElementById('input').value;
+            const chunkSize = parseInt(document.getElementById('chunk-size').value);
+            const symbolsInput = document.getElementById('symbols').value;
+            const symbols = symbolsInput.split(' ').filter(s => s.length > 0);
+            const symbolsSet = new Set(symbols);
+            const removeDuplicates = document.getElementById('remove-duplicates').checked;
+            let output = '';
+            let lastType = null; // 'letter', 'symbol', 'other'
+            
+            for (let i = 0; i < input.length; i++) {
+                const char = input[i];
+                
+                // 检查是否是英文字母
+                if (/[a-zA-Z]/.test(char)) {
+                    // 收集连续的英文字母
+                    let letters = char;
+                    let j = i + 1;
+                    while (j < input.length && /[a-zA-Z]/.test(input[j])) {
+                        letters += input[j];
+                        j++;
+                    }
+                    
+                    // 在字母和符号之间添加+号
+                    if (lastType === 'symbol') {
+                        output += '+';
+                    }
+                    
+                    // 拼接字母
+                    if (letters.length > chunkSize) {
+                        let concatResult = '';
+                        for (let k = 0; k < letters.length; k += chunkSize) {
+                            const chunk = letters.substring(k, k + chunkSize);
+                            concatResult += `'${chunk}'`;
+                            if (k + chunkSize < letters.length) {
+                                concatResult += '+';
+                            }
+                        }
+                        output += concatResult;
+                    } else {
+                        output += `'${letters}'`;
+                    }
+                    
+                    lastType = 'letter';
+                    i = j - 1;
+                } 
+                // 检查是否是需要拼接的符号
+                else if (symbolsSet.has(char)) {
+                    // 收集连续的相同符号
+                    let symbolChars = char;
+                    let j = i + 1;
+                    while (j < input.length && symbolsSet.has(input[j]) && input[j] === char) {
+                        symbolChars += input[j];
+                        j++;
+                    }
+                    
+                    // 在符号和字母之间添加+号
+                    if (lastType === 'letter') {
+                        output += '+';
+                    }
+                    
+                    // 拼接符号
+                    if (symbolChars.length > 1) {
+                        let concatResult = '';
+                        for (let k = 0; k < symbolChars.length; k++) {
+                            concatResult += `'${symbolChars[k]}'`;
+                            if (k < symbolChars.length - 1) {
+                                concatResult += '+';
+                            }
+                        }
+                        output += concatResult;
+                    } else {
+                        output += `'${symbolChars}'`;
+                    }
+                    
+                    lastType = 'symbol';
+                    i = j - 1;
+                } else {
+                    // 重置类型，因为遇到了其他字符
+                    lastType = 'other';
+                    output += char;
+                }
+            }
+            
+            // 去除重复的拼接符号
+            if (removeDuplicates) {
+                output = output.replace(/''/g, "'");
+            }
+            
+            document.getElementById('output').value = output;
+        }
+        
+        // 关于弹窗功能
+        document.getElementById('about-btn').addEventListener('click', function() {
+            document.getElementById('about-modal').style.display = 'block';
+        });
+        
+        document.getElementById('close-modal').addEventListener('click', function() {
+            document.getElementById('about-modal').style.display = 'none';
+        });
+        
+        // 点击弹窗外部关闭
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('about-modal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
